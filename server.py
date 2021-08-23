@@ -5,6 +5,7 @@ import socket
 host = input("Enter the ip address of this server: ")
 port = int(input("Enter the connection port: "))
 
+
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 
