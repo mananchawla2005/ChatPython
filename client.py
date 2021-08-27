@@ -53,6 +53,7 @@ def write():
             print("/about:    Shows the app information")
             print("/dc:       Disconnects from the server!")
             print("/ban:      Bans the person(privelaged command)")
+            print("/unban:    Unbans the person(privelaged command)")
             print("/kick:     Kicks the person(privelaged command)")
         elif(message=="/about"):
             print('Created by Manan Chawla')
@@ -67,7 +68,7 @@ def write():
             print('Press any key to continue.....')
             client.close()
         else:
-            msg = f'@{nickname}: {message}'
+            msg = f'{nickname}: {message}'
             client.send(msg.encode('ascii'))
 
 recieve_thread = threading.Thread(target=recieve)

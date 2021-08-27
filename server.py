@@ -49,6 +49,14 @@ def handle(client):
                             continue
                 else:
                     broadcast(message)
+            elif(message.decode('ascii').split(' ')[1]=='/unban'):
+                if(isAdmin):
+                    person = message.decode('ascii').split(' ')[2]
+                    bans.remove(person)
+                    broadcast(f'{nick} was unbanned!'.encode('ascii'))              
+                    continue
+                else:
+                    broadcast(message)                                
             elif(message.decode('ascii').split(' ')[1]=='/kick'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
@@ -104,8 +112,9 @@ def write():
             print("Here are some basic commmands to start with: ")
             print("/help:     Prints the help menu")
             print("/about:    Shows the app information")
-            print("/log:      Enables logging!")
+            print("/log:      Enables logging")
             print("/promote:  Promote to Admin")
+            print("/members:  Shows the list of joined members")
         elif(message=="/about"):
             print('Created by Manan Chawla')
             print('-------------------------')
@@ -129,6 +138,10 @@ def write():
 
             else:
                 print('Person not found!')
+        elif(message=="/members"):
+            for clt, nick in clients: # pylint: disable=unused-variable
+                if(nick in nicknames):
+                    print(nick)
 
 write_thread = threading.Thread(target=write)
 write_thread.start()
