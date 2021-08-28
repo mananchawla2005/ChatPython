@@ -1,43 +1,47 @@
-import threading
-import sys
 import socket
+import sys
+import threading
+import mysql.connector as msql 
 
+conn = msql.connect(host='localhost',user='root',passwd='',database='chatapp')
+if conn.is_connected():
+   print("Connection Established")
+else:
+   print("Connection Errors! Kindly check!!!")
+cmd=conn.cursor()
 host = input("Enter the ip address of this server: ")
 port = int(input("Enter the connection port: "))
 
-
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 
 try:
     server.bind((host, port))
     server.listen()
-except:
+    cmd.execute(f"INSERT INTO log values(1, DEFAULT, 'SERVER STARTED', 'Started listening on {host}:{port}')")
+    conn.commit()   
+except :
     print('Error please try again!')
+    cmd.execute(f"INSERT INTO log values(2, DEFAULT, 'UNEXPECTED ERROR', 'Couldn't start the server')")
+    conn.commit()
+    conn.close()
     sys.exit()
-
 
 clients= []
 bans= []
 admins= []
 nicknames= []
-logging = False
 
 def broadcast(msg):
     for (client, nick) in clients: # pylint: disable=unused-variable
         client.send(msg)
 
 def handle(client):
-    global logging
     global bans
     while True:
         try:
             message = client.recv(1024)
-            if(logging):
-                open("logging.txt", "a").write(message.decode('UTF-8') + '\n')
 
             isAdmin = message.decode('ascii').split(' ')[0].split(':')[0] in admins
-            
             if(message.decode('ascii').split(' ')[1]=='/ban'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
@@ -45,30 +49,48 @@ def handle(client):
                         if(nick==person):
                             bans.append(person)
                             clt.send('BANNED'.encode('ascii'))
-                            broadcast(f'{nick} was banned!'.encode('ascii'))              
+                            broadcast(f'{nick} was banned!'.encode('ascii'))   
+                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was banned!')")
+                            conn.commit()           
                             continue
                 else:
                     broadcast(message)
+                    for clt, nick in clients:
+                        if(clt==client):
+                            cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{nick} sent the message: {message.decode('ascii')}')")
+                            conn.commit()  
             elif(message.decode('ascii').split(' ')[1]=='/unban'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
                     bans.remove(person)
-                    broadcast(f'{nick} was unbanned!'.encode('ascii'))              
+                    broadcast(f'{nick} was unbanned!'.encode('ascii'))
+                    cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was unbanned!')")
+                    conn.commit()              
                     continue
                 else:
-                    broadcast(message)                                
+                    broadcast(message)
+                    cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', 'message recieved')")
+                    conn.commit()                                
             elif(message.decode('ascii').split(' ')[1]=='/kick'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
                     for clt, nick in clients:
                         if(nick==person):
                             clt.send('KICKED'.encode('ascii'))
-                            broadcast(f'{nick} was kicked!'.encode('ascii'))              
+                            broadcast(f'{nick} was kicked!'.encode('ascii'))     
+                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was kicked!')")
+                            conn.commit()         
                             continue
                 else:
                     broadcast(message)
+                    for clt, nick in clients:
+                        if(clt==client):
+                            cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{nick} sent the message: {message.decode('ascii')}')")
+                            conn.commit()
             else:
                 broadcast(message)
+                cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', 'message recieved')")
+                conn.commit()      
         except:
             for clt, nick in clients:
                 if(clt==client):
@@ -78,6 +100,8 @@ def handle(client):
             clients.remove([client, nickname])
             client.close()
             broadcast(f'\n{nickname} left the chat'.encode('ascii'))
+            cmd.execute(f"INSERT INTO log values(5, DEFAULT, 'USER LEFT THE CHAT', '{nickname} left the chat!')")
+            conn.commit()
             break
 
 def receive():
@@ -87,8 +111,12 @@ def receive():
         client.send('NICK'.encode('ascii'))
         try:
             nickname = client.recv(1024).decode('ascii')
+            cmd.execute(f"INSERT INTO log values(6, DEFAULT, 'USER JOINED THE CHAT', '{nickname} joined the chat!')")
+            conn.commit()
         except:
             client.close()
+            cmd.execute(f"INSERT INTO log values(5, DEFAULT, 'USER LEFT THE CHAT', 'Couldn't make a connection')")
+            conn.commit()
             continue
         if(nickname in bans):
             broadcast(f'{nickname} left the chat'.encode('ascii'))
@@ -104,7 +132,6 @@ def receive():
         thread.start()
 
 def write():
-    global logging
     while True:
         message = input("")
         if(message=="/help"):
@@ -112,7 +139,6 @@ def write():
             print("Here are some basic commmands to start with: ")
             print("/help:     Prints the help menu")
             print("/about:    Shows the app information")
-            print("/log:      Enables logging")
             print("/promote:  Promote to Admin")
             print("/members:  Shows the list of joined members")
         elif(message=="/about"):
@@ -122,13 +148,7 @@ def write():
             print('Working: ')
             print('Server listens on a specific port. Whenever a client wants to connect to the server, ')
             print('It sends a tcp request to the server and then server connects the client.')
-            print('Additional logging is made possible by file handling')
-        elif(message=="/log"):
-            logging = not logging
-            if(logging):
-                print("Now logging the chat")
-            else:
-                print("Stopped logging the chat")
+            print('Additional logging is made possible by use of mysql database.')
         elif(message.split(' ')[0]=="/promote"):
             person = message.split(' ')[1]
             if(person in nicknames):
