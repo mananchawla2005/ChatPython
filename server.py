@@ -21,7 +21,7 @@ try:
     conn.commit()   
 except :
     print('Error please try again!')
-    cmd.execute(f"INSERT INTO log values(2, DEFAULT, 'UNEXPECTED ERROR', 'Couldn't start the server')")
+    cmd.execute(f"INSERT INTO log values(2, DEFAULT, 'UNEXPECTED ERROR', 'Could not start the server')")
     conn.commit()
     conn.close()
     sys.exit()
@@ -48,49 +48,53 @@ def handle(client):
                     for clt, nick in clients:
                         if(nick==person):
                             bans.append(person)
+                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{person} was banned!')")
+                            conn.commit()   
                             clt.send('BANNED'.encode('ascii'))
-                            broadcast(f'{nick} was banned!'.encode('ascii'))   
-                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was banned!')")
-                            conn.commit()           
+                            broadcast(f'{nick} was banned!'.encode('ascii'))           
                             continue
                 else:
-                    broadcast(message)
-                    for clt, nick in clients:
-                        if(clt==client):
-                            cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{nick} sent the message: {message.decode('ascii')}')")
-                            conn.commit()  
+                    broadcast(message) 
+                    try:
+                        cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{message.decode('ascii').split(':')[0]} said {' '.join(message.decode('ascii').split(' ')[1:])}')")
+                        conn.commit()
+                    except Exception as e: print(e)
             elif(message.decode('ascii').split(' ')[1]=='/unban'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
                     bans.remove(person)
-                    broadcast(f'{nick} was unbanned!'.encode('ascii'))
-                    cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was unbanned!')")
-                    conn.commit()              
+                    cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{person} was unbanned!')")
+                    conn.commit()  
+                    broadcast(f'{nick} was unbanned!'.encode('ascii'))            
                     continue
                 else:
                     broadcast(message)
-                    cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', 'message recieved')")
-                    conn.commit()                                
+                    try:
+                        cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{message.decode('ascii').split(':')[0]} said {' '.join(message.decode('ascii').split(' ')[1:])}')")
+                        conn.commit()
+                    except Exception as e: print(e)                              
             elif(message.decode('ascii').split(' ')[1]=='/kick'):
                 if(isAdmin):
                     person = message.decode('ascii').split(' ')[2]
                     for clt, nick in clients:
                         if(nick==person):
+                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{person} was kicked!')")
+                            conn.commit() 
                             clt.send('KICKED'.encode('ascii'))
-                            broadcast(f'{nick} was kicked!'.encode('ascii'))     
-                            cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{nick} was kicked!')")
-                            conn.commit()         
+                            broadcast(f'{nick} was kicked!'.encode('ascii'))             
                             continue
                 else:
                     broadcast(message)
-                    for clt, nick in clients:
-                        if(clt==client):
-                            cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{nick} sent the message: {message.decode('ascii')}')")
-                            conn.commit()
+                    try:
+                        cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{message.decode('ascii').split(':')[0]} said {' '.join(message.decode('ascii').split(' ')[1:])}')")
+                        conn.commit()
+                    except Exception as e: print(e)
             else:
                 broadcast(message)
-                cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', 'message recieved')")
-                conn.commit()      
+                try:
+                    cmd.execute(f"INSERT INTO log values(3, DEFAULT, 'MESSAGE RECIEVED', '{message.decode('ascii').split(':')[0]} said {' '.join(message.decode('ascii').split(' ')[1:])}')")
+                    conn.commit()
+                except Exception as e: print(e)
         except:
             for clt, nick in clients:
                 if(clt==client):
