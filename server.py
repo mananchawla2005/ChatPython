@@ -125,6 +125,8 @@ def receive():
         if(nickname in bans):
             broadcast(f'{nickname} left the chat'.encode('ascii'))
             client.send('BANNED'.encode('ascii'))
+            cmd.execute(f"INSERT INTO log values(5, DEFAULT, 'USER LEFT THE CHAT', 'USER IS BANNED')")
+            conn.commit()
             continue 
         nicknames.append(nickname)
         clients.append([client, nickname])
