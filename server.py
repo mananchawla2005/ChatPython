@@ -2,6 +2,7 @@ import socket
 import sys
 import threading
 import mysql.connector as msql 
+import datetime
 
 conn = msql.connect(host='localhost',user='root',passwd='',database='chatapp')
 if conn.is_connected():
@@ -161,13 +162,29 @@ def write():
                 admins.append(person)
                 print(f'{person} is now an admin!')
                 broadcast(f'{person} is now an admin!'.encode('ascii'))
-
+                cmd.execute(f"INSERT INTO log values(4, DEFAULT, 'ADMIN ACTION', '{person} is now an admin!')")
+                conn.commit() 
             else:
                 print('Person not found!')
         elif(message=="/members"):
             for clt, nick in clients: # pylint: disable=unused-variable
                 if(nick in nicknames):
                     print(nick)
+        elif(message.split(' ')[0]=="/getlogs"):
+            first = "'" + message.split(' ')[1] + "'"
+            try:
+                second = "'" + message.split(' ')[2] + "'"
+            except:
+                second = first + ' + INTERVAL 1 DAY'
+            
+            query = f"SELECT * FROM log WHERE TIME>={first} and TIME<{second}"
+            cmd.execute(query)
+            d=cmd.fetchall() 
+            for r in d:
+                x, y, z, w = r 
+                f = '%Y-%m-%d %H:%M:%S'
+                r = 'ID: ' + str(x), y.strftime(f), 'EVENT: ' + z, 'MESSAGE: ' + w
+                print(r)
 
 write_thread = threading.Thread(target=write)
 write_thread.start()
