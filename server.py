@@ -2,7 +2,8 @@ import socket
 import sys
 import threading
 import mysql.connector as msql 
-import datetime
+from datetime import date
+today = date.today().strftime("%Y-%m-%d")
 
 conn = msql.connect(host='localhost',user='root',passwd='',database='chatapp')
 if conn.is_connected():
@@ -146,8 +147,9 @@ def write():
             print("Here are some basic commmands to start with: ")
             print("/help:     Prints the help menu")
             print("/about:    Shows the app information")
-            print("/promote:  Promote to Admin")
+            print("/promote <User>:  Promote to Admin")
             print("/members:  Shows the list of joined members")
+            print("/getlogs <Start Date> <End Date>:  Shows the logs from the starting date to the end date ( optional )")
         elif(message=="/about"):
             print('Created by Manan Chawla')
             print('-------------------------')
@@ -175,9 +177,10 @@ def write():
             try:
                 second = "'" + message.split(' ')[2] + "'"
             except:
-                second = first + ' + INTERVAL 1 DAY'
+                second = "'" + today + "'"
             
             query = f"SELECT * FROM log WHERE TIME>={first} and TIME<{second}"
+            # print(query)
             cmd.execute(query)
             d=cmd.fetchall() 
             for r in d:
